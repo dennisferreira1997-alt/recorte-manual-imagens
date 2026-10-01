@@ -1,0 +1,28 @@
+# artefatos de compilacao do PyInstaller
+build/
+dist/
+*.manifest
+
+# o executavel publicado fica versionado em executavel/ (excecao proposital)
+!executavel/RecorteManual.exe
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+.ipynb_checkpoints/
+
+# saidas de teste do proprio programa
+recortes/
+recortes_demo/
+recortes_refeitos/
+recortes_coords.csv
+
+# sistema / editores
+Thumbs.db
+desktop.ini
+.DS_Store
+.idea/
+.vscode/
