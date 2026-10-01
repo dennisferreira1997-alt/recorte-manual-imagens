@@ -1,0 +1,5 @@
+# Para rodar o programa (o Tkinter ja vem com o Python no Windows)
+pillow>=10.0
+
+# Para gerar o RecorteManual.exe
+pyinstaller>=6.0
