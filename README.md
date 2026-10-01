@@ -27,13 +27,13 @@ inconsistente e o pior para um artigo **não é reprodutível**: ninguém conseg
 exatamente os mesmos recortes depois.
 
 Este programa resolve os três pontos: a seleção é visual, o tamanho pode ser travado, e
-**toda ROI aplicada é gravada em um CSV** que regenera os recortes idênticos a qualquer
+**toda ROI aplicada é gravada em um CSV** que refaz os recortes idênticos a qualquer
 momento, em qualquer computador.
 
 ![Tela principal do programa](docs/tela-principal.png)
 
-<sub>Fotografia de uma amostra de lixiviado de e-waste: a ROI marcada sobre o disco da amostra está
-dividida em uma grade 2 × 3, ou seja, seis sub-imagens extraídas desta única foto — todas na
+<sub>Fotografia de uma amostra de lixiviado de e-waste. A ROI marcada sobre o disco da amostra está
+dividida em uma grade 2 × 3, ou seja, seis sub-imagens extraídas desta única foto, todas na
 resolução original e com as coordenadas registradas em CSV.</sub>
 
 ## Recursos
@@ -74,7 +74,7 @@ resolução original e com as coordenadas registradas em CSV.</sub>
 > com o comando da seção seguinte.
 
 Quer testar sem ter imagens à mão? A pasta [`exemplos/imagem_exemplo/`](exemplos/imagem_exemplo)
-traz uma fotografia real de amostra (a mesma da captura de tela acima) pronta para recortar.
+traz uma fotografia de uma amostra (a mesma da captura de tela acima) pronta para recortar.
 
 ## Usar como biblioteca Python
 
