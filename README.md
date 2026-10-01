@@ -20,10 +20,10 @@ Desenvolvido pelo grupo de pesquisa **GAAA** · Software criado por **Dennis da 
 
 ## O problema
 
-Em química analítica por imagens, cada fotografia de uma amostra precisa virar várias
+Quando trabalhamos com imagens digitais em quimica analitica, cada fotografia de uma amostra precisa virar várias
 sub-imagens recortadas na mesma região, com o mesmo tamanho, para que os histogramas de
 cor sejam comparáveis entre amostras. Fazer isso à mão em um editor de imagens é lento,
-inconsistente e — o pior para um artigo — **não é reprodutível**: ninguém consegue repetir
+inconsistente e o pior para um artigo **não é reprodutível**, ninguém consegue repetir
 exatamente os mesmos recortes depois.
 
 Este programa resolve os três pontos: a seleção é visual, o tamanho pode ser travado, e
@@ -141,7 +141,7 @@ Grupo de Abordagens Analíticas Alternativas
 
 **Software criado por Dennis da Silva Ferreira**
 
-Escrito para o tratamento de imagens de um estudo de química analítica, e publicado aqui
+Escrito para o tratamento de imagens em química analítica, e publicado aqui
 para que outros grupos possam usar e para que os recortes de qualquer trabalho feito com
 ele sejam reprodutíveis por terceiros.
 
