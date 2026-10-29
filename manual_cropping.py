@@ -13,7 +13,7 @@ Three working modes, which can be combined:
                       which is essential for comparing colour histograms).
   3) LOCKED ROI     - mark the region once and reuse it on all the following
                       images (just press Enter on each one), or apply it to the
-                      whole folder at once ("Aplicar a todas").
+                      whole folder at once ("Apply to all").
 
 Each ROI can also be subdivided into a rows x columns grid, producing N
 sub-crops per region (useful to multiply samples per photograph).
@@ -22,10 +22,15 @@ Every crop is taken at the ORIGINAL resolution of the image (the on-screen zoom
 only affects the display) and the coordinates are written to a CSV, so that the
 cropping is reproducible and can be re-run later.
 
+The interface is bilingual (Portuguese and English). The language can be
+switched at any moment from the selector at the bottom of the control panel,
+without restarting, and the choice is remembered for the next run.
+
 BASIC USE (graphical window)
 ----------------------------
     .venv\\Scripts\\python.exe manual_cropping.py
     .venv\\Scripts\\python.exe manual_cropping.py --input images --output crops
+    .venv\\Scripts\\python.exe manual_cropping.py --lang en
 
 BATCH USE (no window)
 ---------------------
@@ -46,11 +51,6 @@ KEYBOARD SHORTCUTS
     + / -          zoom                     0               fit to window
     F1             "About" window (credits)
 
-NOTE ON THE INTERFACE LANGUAGE
-------------------------------
-    The window labels and messages are still in Portuguese, the language of the
-    research group that uses the tool. Only the code is in English.
-
 CREDITS
 -------
     Developed by the GAAA research group
@@ -60,6 +60,9 @@ CREDITS
 
 import argparse
 import csv
+import json
+import locale
+import os
 import sys
 from pathlib import Path
 
@@ -75,7 +78,7 @@ APP_AUTHOR = 'Dennis da Silva Ferreira'
 APP_GROUP = 'Grupo de Abordagens Analiticas Alternativas (GAAA)'
 APP_YEAR = '2026'
 LOGO_FILE = 'gaaa_logo.jpg'
-ICON_FILE = 'gaaa.ico'
+ICON_FILE = 'app_icon.ico'
 CSV_COLUMNS = ['image', 'roi', 'grid_row', 'grid_col',
                'x', 'y', 'width', 'height',
                'original_width', 'original_height', 'output_file']
@@ -94,6 +97,207 @@ LEGACY_CSV_COLUMNS = {
 }
 
 
+# =============================================================================
+# 0. LANGUAGES
+#    Every string the user can see lives here. Adding a third language is a
+#    matter of adding one more entry to TEXTS and to LANGUAGE_NAMES.
+# =============================================================================
+LANGUAGE_NAMES = {'pt': 'Português', 'en': 'English'}
+DEFAULT_LANGUAGE = 'en'
+
+TEXTS = {
+    'pt': {
+        'subtitle': 'Recorte de regioes de interesse (ROIs) em lotes de imagens',
+        # --- About window ---
+        'about_title': 'Sobre - {app}',
+        'about_developed': 'Desenvolvido pelo grupo de pesquisa GAAA',
+        'about_created': 'Software criado por {author}',
+        'about_use': '{year} - uso academico e cientifico',
+        'close': 'Fechar',
+        # --- control panel ---
+        'folders': 'Pastas',
+        'open_images': 'Abrir pasta de imagens...',
+        'choose_output': 'Pasta de saida...',
+        'output_is': 'saida: {path}',
+        'image': 'Imagem',
+        'previous': '<< Anterior',
+        'next': 'Proxima >>',
+        'fit_window': 'Ajustar a janela',
+        'selection_mode': 'Modo de selecao',
+        'fixed_size': 'Tamanho fixo (clique no centro)',
+        'width_short': 'larg',
+        'height_short': 'x alt',
+        'pixels': 'px',
+        'lock_rois': 'Travar ROIs para as proximas imagens',
+        'grid_title': 'Grade dentro de cada ROI',
+        'rows': 'linhas',
+        'columns': 'colunas',
+        'show': 'Ver',
+        'rois_title': 'ROIs da imagem atual',
+        'remove': 'Remover (Del)',
+        'clear': 'Limpar (C)',
+        'output': 'Saida',
+        'format': 'formato',
+        'subfolder': 'Subpasta por imagem',
+        'save_next': 'Salvar recortes e avancar (Enter)',
+        'apply_all': 'Aplicar estas ROIs a TODAS as imagens',
+        'about_button': 'Sobre (F1)',
+        'language': 'Idioma',
+        # --- status bar ---
+        'status_open_folder': 'Abra a pasta com as imagens.',
+        'status_loaded': '{n} imagens carregadas.',
+        'status_end_of_list': 'Fim da lista de imagens.',
+        'status_roi_added': 'ROI {n}: {w}x{h} px em ({x}, {y})',
+        'status_locked': 'ROIs travadas: serao reaproveitadas nas proximas imagens.',
+        'status_unlocked': 'ROIs destravadas.',
+        'status_saved': '{n} recorte(s) salvos de {name}.',
+        'status_batch_done': '{n} recortes gravados em {path}.',
+        'cursor': 'cursor: ({x}, {y}) px   zoom: {zoom}%',
+        'cursor_selection': '   selecao: {w}x{h}',
+        'saved_mark': ' [salva]',
+        # --- dialogs ---
+        'dialog_images': 'Pasta com as imagens',
+        'dialog_output': 'Pasta de saida dos recortes',
+        'no_images_title': 'Sem imagens',
+        'no_images': 'Nenhuma imagem ({extensions}) em:\n{folder}',
+        'no_roi_title': 'Sem ROI',
+        'no_roi_save': 'Selecione ao menos uma regiao antes de salvar.',
+        'no_roi_batch': 'Selecione a regiao antes de aplicar em lote.',
+        'end_title': 'Fim',
+        'end_message': 'Ultima imagem da pasta processada.',
+        'apply_all_title': 'Aplicar a todas',
+        'apply_all_question': ('Aplicar {rois} ROI(s) x grade {rows}x{cols} '
+                               '({per_image} recortes por imagem) as {n} '
+                               'imagens da pasta?\n\nSaida: {path}'),
+        'done_title': 'Concluido',
+        'done_message': '{n} recortes gravados em:\n{path}',
+    },
+    'en': {
+        'subtitle': 'Cropping of regions of interest (ROIs) in batches of images',
+        # --- About window ---
+        'about_title': 'About - {app}',
+        'about_developed': 'Developed by the GAAA research group',
+        'about_created': 'Software created by {author}',
+        'about_use': '{year} - academic and scientific use',
+        'close': 'Close',
+        # --- control panel ---
+        'folders': 'Folders',
+        'open_images': 'Open image folder...',
+        'choose_output': 'Output folder...',
+        'output_is': 'output: {path}',
+        'image': 'Image',
+        'previous': '<< Previous',
+        'next': 'Next >>',
+        'fit_window': 'Fit to window',
+        'selection_mode': 'Selection mode',
+        'fixed_size': 'Fixed size (click the centre)',
+        'width_short': 'width',
+        'height_short': 'x height',
+        'pixels': 'px',
+        'lock_rois': 'Lock ROIs for the next images',
+        'grid_title': 'Grid inside each ROI',
+        'rows': 'rows',
+        'columns': 'columns',
+        'show': 'Show',
+        'rois_title': 'ROIs of the current image',
+        'remove': 'Remove (Del)',
+        'clear': 'Clear (C)',
+        'output': 'Output',
+        'format': 'format',
+        'subfolder': 'Subfolder per image',
+        'save_next': 'Save crops and move on (Enter)',
+        'apply_all': 'Apply these ROIs to ALL images',
+        'about_button': 'About (F1)',
+        'language': 'Language',
+        # --- status bar ---
+        'status_open_folder': 'Open the folder with the images.',
+        'status_loaded': '{n} images loaded.',
+        'status_end_of_list': 'End of the image list.',
+        'status_roi_added': 'ROI {n}: {w}x{h} px at ({x}, {y})',
+        'status_locked': 'ROIs locked: they will be reused on the next images.',
+        'status_unlocked': 'ROIs unlocked.',
+        'status_saved': '{n} crop(s) saved from {name}.',
+        'status_batch_done': '{n} crops written to {path}.',
+        'cursor': 'cursor: ({x}, {y}) px   zoom: {zoom}%',
+        'cursor_selection': '   selection: {w}x{h}',
+        'saved_mark': ' [saved]',
+        # --- dialogs ---
+        'dialog_images': 'Folder with the images',
+        'dialog_output': 'Output folder for the crops',
+        'no_images_title': 'No images',
+        'no_images': 'No image ({extensions}) in:\n{folder}',
+        'no_roi_title': 'No ROI',
+        'no_roi_save': 'Select at least one region before saving.',
+        'no_roi_batch': 'Select the region before applying in batch.',
+        'end_title': 'Done',
+        'end_message': 'Last image of the folder processed.',
+        'apply_all_title': 'Apply to all',
+        'apply_all_question': ('Apply {rois} ROI(s) x {rows}x{cols} grid '
+                               '({per_image} crops per image) to the {n} '
+                               'images of the folder?\n\nOutput: {path}'),
+        'done_title': 'Done',
+        'done_message': '{n} crops written to:\n{path}',
+    },
+}
+
+
+def settings_path():
+    """Where the chosen language is remembered between runs."""
+    base = os.environ.get('APPDATA') or Path.home()
+    return Path(base) / 'ManualImageCropping' / 'settings.json'
+
+
+def detect_language():
+    """Portuguese when the system is in Portuguese, English otherwise."""
+    try:
+        code = (locale.getlocale()[0] or '').lower()
+    except (TypeError, ValueError):
+        code = ''
+    return 'pt' if code.startswith(('pt', 'portuguese')) else DEFAULT_LANGUAGE
+
+
+def load_language():
+    """Language saved by a previous run, or the one the system suggests."""
+    try:
+        saved = json.loads(settings_path().read_text(encoding='utf-8')).get('language')
+    except (OSError, ValueError):
+        saved = None
+    return saved if saved in TEXTS else detect_language()
+
+
+def save_language(language):
+    """Remember the choice; failing to write must never break the program."""
+    try:
+        path = settings_path()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps({'language': language}), encoding='utf-8')
+    except OSError:
+        pass
+
+
+class Translator:
+    """
+    Tiny lookup object: `tr('rows')` returns the text in the current language.
+
+    Missing keys fall back to English and then to the key itself, so a typo
+    shows up on screen instead of raising in the middle of the interface.
+    """
+
+    def __init__(self, language=None):
+        self.language = language if language in TEXTS else load_language()
+
+    def __call__(self, key, **values):
+        text = TEXTS[self.language].get(key) or TEXTS[DEFAULT_LANGUAGE].get(key, key)
+        return text.format(**values) if values else text
+
+    def set_language(self, language):
+        if language in TEXTS and language != self.language:
+            self.language = language
+            save_language(language)
+            return True
+        return False
+
+
 def resource_path(name):
     """
     Locate a file from the `assets` folder, both when running the .py and from
@@ -108,6 +312,14 @@ def resource_path(name):
         if candidate.exists():
             return candidate
     return None
+
+
+def shorten_path(path, parts=3):
+    """Shorten a long path for display: C:\\a\\b\\c\\d -> ...\\b\\c\\d."""
+    pieces = Path(path).parts
+    if len(pieces) <= parts:
+        return str(path)
+    return '...' + os.sep + os.sep.join(pieces[-parts:])
 
 
 # =============================================================================
@@ -250,7 +462,7 @@ def apply_in_batch(input_folder, output_folder, rois, n_rows=1, n_cols=1,
     """Apply the same ROIs to every image of the folder (no interface)."""
     images = list_images(input_folder)
     if not images:
-        log(f'Nenhuma imagem encontrada em {input_folder}')
+        log(f'No image found in {input_folder}')
         return 0
 
     total = 0
@@ -260,8 +472,8 @@ def apply_in_batch(input_folder, output_folder, rois, n_rows=1, n_cols=1,
                              subfolder_per_image)
         log_to_csv(output_folder, records)
         total += len(records)
-        log(f'{path.name}: {len(records)} recorte(s)')
-    log(f'Total: {total} recortes em {output_folder}')
+        log(f'{path.name}: {len(records)} crop(s)')
+    log(f'Total: {total} crops in {output_folder}')
     return total
 
 
@@ -292,7 +504,7 @@ def redo_from_csv(csv_path, input_folder, output_folder, fmt='png', log=print):
         if name != cached_name:
             path = input_folder / name
             if not path.exists():
-                log(f'AVISO: {name} nao encontrada em {input_folder}')
+                log(f'WARNING: {name} not found in {input_folder}')
                 cached_name, cached_img = name, None
                 continue
             cached_name, cached_img = name, open_image(path)
@@ -310,14 +522,12 @@ def redo_from_csv(csv_path, input_folder, output_folder, fmt='png', log=print):
             crop.save(output)
         total += 1
 
-    log(f'{total} recortes refeitos em {output_folder}')
+    log(f'{total} crops redone in {output_folder}')
     return total
 
 
 # =============================================================================
 # 2. GRAPHICAL INTERFACE
-#    The visible labels are in Portuguese on purpose: they are the interface
-#    used by the research group. Only the code around them is in English.
 # =============================================================================
 def apply_icon(window):
     """Put the GAAA icon on the title bar (skipped if there is no .ico)."""
@@ -330,13 +540,14 @@ def apply_icon(window):
         pass
 
 
-def show_about(parent=None):
+def show_about(parent=None, tr=None):
     """Open the "About" window with the research group logo and the credits."""
     import tkinter as tk
     from tkinter import ttk
 
+    tr = tr or Translator()
     window = tk.Toplevel(parent) if parent is not None else tk.Tk()
-    window.title(f'Sobre - {APP_NAME}')
+    window.title(tr('about_title', app=APP_NAME))
     window.configure(bg='white')
     window.resizable(False, False)
     apply_icon(window)
@@ -361,21 +572,20 @@ def show_about(parent=None):
 
     ttk.Label(frame, text=f'{APP_NAME}  v{APP_VERSION}',
               font=('', 13, 'bold')).pack()
-    ttk.Label(frame, text='Recorte de regioes de interesse (ROIs) em lotes de imagens',
-              wraplength=340, justify='center',
+    ttk.Label(frame, text=tr('subtitle'), wraplength=340, justify='center',
               foreground='#444444').pack(pady=(2, 12))
 
     ttk.Separator(frame).pack(fill='x', pady=4)
-    ttk.Label(frame, text='Desenvolvido pelo grupo de pesquisa GAAA',
-              wraplength=340, justify='center', font=('', 10, 'bold')).pack(pady=(8, 0))
+    ttk.Label(frame, text=tr('about_developed'), wraplength=340,
+              justify='center', font=('', 10, 'bold')).pack(pady=(8, 0))
     ttk.Label(frame, text=APP_GROUP, wraplength=340, justify='center',
               foreground='#444444').pack()
-    ttk.Label(frame, text=f'Software criado por {APP_AUTHOR}',
+    ttk.Label(frame, text=tr('about_created', author=APP_AUTHOR),
               wraplength=340, justify='center').pack(pady=(8, 0))
-    ttk.Label(frame, text=f'{APP_YEAR} - uso academico e cientifico',
+    ttk.Label(frame, text=tr('about_use', year=APP_YEAR),
               foreground='#777777').pack(pady=(6, 10))
 
-    ttk.Button(frame, text='Fechar', command=window.destroy).pack()
+    ttk.Button(frame, text=tr('close'), command=window.destroy).pack()
 
     window.update_idletasks()
     if parent is not None:
@@ -390,21 +600,37 @@ def show_about(parent=None):
 
 
 class CropperApp:
-    """Manual cropping window: canvas with the image + control panel."""
+    """
+    Manual cropping window: canvas with the image + control panel.
 
-    def __init__(self, root, input_folder=None, output_folder=None, fmt='png'):
+    The control panel needs more vertical space than many screens offer, so it
+    is split in two: the actions that must never disappear (save, apply, about)
+    are pinned to the bottom, and everything above them lives in a scrollable
+    area. That way the window works at any resolution.
+    """
+
+    PANEL_WIDTH = 250
+
+    def __init__(self, root, input_folder=None, output_folder=None, fmt='png',
+                 language=None):
         import tkinter as tk
         from tkinter import ttk
 
         self.tk, self.ttk = tk, ttk
         self.root = root
+        self.tr = Translator(language)
+
         root.title(f'{APP_NAME} v{APP_VERSION} - GAAA')
-        # never larger than the screen: on 768 px laptops the side panel would
-        # be cut off and the "Sobre" button would fall outside the visible area
-        width = min(1200, root.winfo_screenwidth() - 80)
-        height = min(780, root.winfo_screenheight() - 120)
-        root.geometry(f'{max(900, width)}x{max(600, height)}')
-        root.minsize(900, 600)
+        # Size and position the window inside the usable area of the screen.
+        # The 140 px margin leaves room for the title bar and the taskbar, so
+        # the pinned buttons at the bottom of the panel are never hidden by it.
+        screen_w, screen_h = root.winfo_screenwidth(), root.winfo_screenheight()
+        width = max(820, min(1200, screen_w - 80))
+        height = max(520, min(780, screen_h - 140))
+        root.geometry(f'{width}x{height}'
+                      f'+{max(0, (screen_w - width) // 2)}'
+                      f'+{max(0, (screen_h - height) // 3)}')
+        root.minsize(820, 520)
         apply_icon(root)
 
         self.input_folder = Path(input_folder) if input_folder else None
@@ -420,6 +646,9 @@ class CropperApp:
         self.saved = set()
         self._drag = None
         self._temp_roi = None
+        self._translatable = []    # (widget, text key) pairs, for retranslate
+        self._status = ('status_open_folder', {})
+        self._cursor = None        # last (x, y) under the pointer
 
         # ---- control variables ----
         self.var_lock = tk.BooleanVar(value=False)
@@ -430,8 +659,9 @@ class CropperApp:
         self.var_cols = tk.StringVar(value='1')
         self.var_format = tk.StringVar(value=fmt)
         self.var_subfolder = tk.BooleanVar(value=False)
-        self.var_status = tk.StringVar(value='Abra a pasta com as imagens.')
+        self.var_status = tk.StringVar(value=self.tr('status_open_folder'))
         self.var_cursor = tk.StringVar(value='')
+        self.var_language = tk.StringVar(value=LANGUAGE_NAMES[self.tr.language])
 
         self._build_interface()
         self._bind_events()
@@ -439,22 +669,77 @@ class CropperApp:
         if self.input_folder:
             self.load_folder(self.input_folder)
 
+    # ------------------------------------------------------------ translation
+    def _reg(self, widget, key):
+        """Register a widget whose 'text' follows the language, and return it."""
+        self._translatable.append((widget, key))
+        return widget
+
+    def set_language(self, language):
+        """Switch the interface language on the spot, without restarting."""
+        if not self.tr.set_language(language):
+            return
+        self.var_language.set(LANGUAGE_NAMES[language])
+        for widget, key in self._translatable:
+            widget.config(text=self.tr(key))
+        self._update_output_label()
+        self._update_image_label()
+        self._update_status()
+        self._update_cursor_label()
+
+    def _on_language_selected(self, _event=None):
+        chosen = self.var_language.get()
+        for code, name in LANGUAGE_NAMES.items():
+            if name == chosen:
+                self.set_language(code)
+                return
+
+    def set_status(self, key, **values):
+        """Store the status as key + values so it survives a language change."""
+        self._status = (key, values)
+        self._update_status()
+
+    def _update_status(self):
+        key, values = self._status
+        self.var_status.set(self.tr(key, **values) if key else '')
+
+    def _update_output_label(self):
+        text = self.tr('output_is',
+                       path=shorten_path(self.output_folder) if self.output_folder else '-')
+        self.label_output.config(text=text)
+
+    def _update_image_label(self):
+        if not self.images or self.img is None:
+            self.label_image.config(text='-')
+            return
+        path = self.images[self.index]
+        mark = self.tr('saved_mark') if path.name in self.saved else ''
+        self.label_image.config(
+            text=f'{self.index + 1}/{len(self.images)}  {path.name}\n'
+                 f'{self.img.size[0]} x {self.img.size[1]} px{mark}')
+
+    def _update_cursor_label(self):
+        if self._cursor is None:
+            self.var_cursor.set('')
+            return
+        cx, cy = self._cursor
+        text = self.tr('cursor', x=int(cx), y=int(cy), zoom=f'{self.scale * 100:.0f}')
+        if self._temp_roi:
+            text += self.tr('cursor_selection',
+                            w=self._temp_roi[2], h=self._temp_roi[3])
+        self.var_cursor.set(text)
+
     # ------------------------------------------------------------------ layout
     def _build_interface(self):
         tk, ttk = self.tk, self.ttk
 
-        panel = ttk.Frame(self.root, padding=8)
+        panel = ttk.Frame(self.root, padding=(8, 8, 4, 8))
         panel.pack(side='right', fill='y')
+        panel.pack_propagate(False)
+        panel.configure(width=self.PANEL_WIDTH)
 
-        # the footer is packed first, anchored to the bottom, so that the
-        # credits stay visible even when the window is short and the panel fills
-        footer = ttk.Frame(panel)
-        footer.pack(side='bottom', fill='x', pady=(6, 0))
-        ttk.Separator(footer).pack(fill='x', pady=4)
-        ttk.Button(footer, text='Sobre (F1)',
-                   command=lambda: show_about(self.root)).pack(fill='x', pady=2)
-        ttk.Label(footer, text=f'GAAA - {APP_AUTHOR}', wraplength=230,
-                  foreground='#777777', font=('', 8)).pack(anchor='w')
+        self._build_pinned_actions(panel)
+        self._build_scrollable_controls(panel)
 
         area = ttk.Frame(self.root)
         area.pack(side='left', fill='both', expand=True)
@@ -468,94 +753,224 @@ class CropperApp:
         scroll_h.pack(side='bottom', fill='x')
         self.canvas.pack(side='left', fill='both', expand=True)
 
-        ttk.Label(panel, text='Pastas', font=('', 10, 'bold')).pack(anchor='w')
-        ttk.Button(panel, text='Abrir pasta de imagens...',
-                   command=self.choose_input).pack(fill='x', pady=2)
-        ttk.Button(panel, text='Pasta de saida...',
-                   command=self.choose_output).pack(fill='x', pady=2)
-        self.label_output = ttk.Label(panel, text='saida: -', wraplength=230,
-                                      foreground='#555555')
+    def _build_pinned_actions(self, panel):
+        """
+        Bottom of the panel, always visible.
+
+        Packed before the scrollable area and with side='bottom', so Tk gives
+        these widgets their space first: no screen size can push the "save and
+        move on" button out of the window.
+        """
+        ttk = self.ttk
+
+        # the credits line is the same in both languages, so it is not registered
+        ttk.Label(panel, text=f'GAAA - {APP_AUTHOR}', wraplength=230,
+                  foreground='#777777', font=('', 8)).pack(side='bottom', anchor='w')
+
+        bottom_row = ttk.Frame(panel)
+        bottom_row.pack(side='bottom', fill='x', pady=(4, 2))
+        self._reg(ttk.Button(bottom_row, text=self.tr('about_button'),
+                             command=lambda: show_about(self.root, self.tr)),
+                  'about_button').pack(side='right')
+        self.combo_language = ttk.Combobox(
+            bottom_row, textvariable=self.var_language, state='readonly',
+            width=11, values=list(LANGUAGE_NAMES.values()))
+        self.combo_language.pack(side='left')
+        self.combo_language.bind('<<ComboboxSelected>>', self._on_language_selected)
+        self._reg(ttk.Label(panel, text=self.tr('language'),
+                            font=('', 8), foreground='#555555'),
+                  'language').pack(side='bottom', anchor='w')
+
+        ttk.Separator(panel).pack(side='bottom', fill='x', pady=4)
+
+        self._reg(ttk.Button(panel, text=self.tr('apply_all'),
+                             command=self.apply_to_all),
+                  'apply_all').pack(side='bottom', fill='x', pady=2)
+        self._reg(ttk.Button(panel, text=self.tr('save_next'),
+                             command=self.save_and_next),
+                  'save_next').pack(side='bottom', fill='x', pady=(2, 2))
+
+        ttk.Label(panel, textvariable=self.var_status, wraplength=230,
+                  foreground='#0a5a0a').pack(side='bottom', anchor='w', pady=(4, 2))
+        ttk.Label(panel, textvariable=self.var_cursor,
+                  foreground='#444444', font=('', 8)).pack(side='bottom', anchor='w')
+        ttk.Separator(panel).pack(side='bottom', fill='x', pady=4)
+
+    def _build_scrollable_controls(self, panel):
+        """Everything above the pinned actions, inside a scrollable canvas."""
+        tk, ttk = self.tk, self.ttk
+
+        holder = ttk.Frame(panel)
+        holder.pack(side='top', fill='both', expand=True)
+
+        self.panel_canvas = tk.Canvas(holder, highlightthickness=0, borderwidth=0)
+        self.panel_scroll = ttk.Scrollbar(holder, orient='vertical',
+                                          command=self.panel_canvas.yview)
+        self.panel_canvas.configure(yscrollcommand=self.panel_scroll.set)
+        self.panel_canvas.pack(side='left', fill='both', expand=True)
+        self._scrollbar_shown = False
+
+        inner = ttk.Frame(self.panel_canvas)
+        inner_id = self.panel_canvas.create_window((0, 0), window=inner, anchor='nw')
+
+        def on_inner_configure(_event=None):
+            self.panel_canvas.configure(scrollregion=self.panel_canvas.bbox('all'))
+            self._update_panel_scrollbar(inner)
+
+        def on_canvas_configure(event):
+            self.panel_canvas.itemconfigure(inner_id, width=event.width)
+            self._update_panel_scrollbar(inner)
+
+        inner.bind('<Configure>', on_inner_configure)
+        self.panel_canvas.bind('<Configure>', on_canvas_configure)
+
+        self._fill_controls(inner)
+        self._bind_panel_wheel(inner)
+        # start at the top: "open image folder" is the first thing anyone needs
+        self.panel_canvas.after_idle(lambda: self.panel_canvas.yview_moveto(0))
+
+    def _update_panel_scrollbar(self, inner):
+        """
+        Show the panel scrollbar only when the controls do not fit.
+
+        It has to be packed *before* the canvas: the canvas is packed with
+        expand=True and would otherwise swallow the whole cavity, leaving the
+        scrollbar zero pixels wide and therefore invisible.
+        """
+        needs = inner.winfo_reqheight() > self.panel_canvas.winfo_height()
+        if needs and not self._scrollbar_shown:
+            self.panel_scroll.pack(side='right', fill='y',
+                                   before=self.panel_canvas)
+            self._scrollbar_shown = True
+        elif not needs and self._scrollbar_shown:
+            self.panel_scroll.pack_forget()
+            self._scrollbar_shown = False
+        if not needs:
+            # when everything fits, a leftover scroll offset would hide the
+            # first controls behind the top edge
+            self.panel_canvas.yview_moveto(0)
+
+    def _bind_panel_wheel(self, widget):
+        """Let the wheel scroll the panel while the pointer is over it."""
+        def on_wheel(event):
+            if self._scrollbar_shown:
+                self.panel_canvas.yview_scroll(-1 if event.delta > 0 else 1, 'units')
+            return 'break'
+
+        widget.bind('<MouseWheel>', on_wheel)
+        self.panel_canvas.bind('<MouseWheel>', on_wheel)
+        for child in widget.winfo_children():
+            self._bind_panel_wheel_recursive(child, on_wheel)
+
+    def _bind_panel_wheel_recursive(self, widget, handler):
+        if widget.winfo_class() != 'Listbox':      # the list scrolls on its own
+            widget.bind('<MouseWheel>', handler)
+        for child in widget.winfo_children():
+            self._bind_panel_wheel_recursive(child, handler)
+
+    def _fill_controls(self, parent):
+        """The controls themselves, in the scrollable part of the panel."""
+        tk, ttk = self.tk, self.ttk
+
+        self._reg(ttk.Label(parent, text=self.tr('folders'), font=('', 10, 'bold')),
+                  'folders').pack(anchor='w')
+        self._reg(ttk.Button(parent, text=self.tr('open_images'),
+                             command=self.choose_input),
+                  'open_images').pack(fill='x', pady=2)
+        self._reg(ttk.Button(parent, text=self.tr('choose_output'),
+                             command=self.choose_output),
+                  'choose_output').pack(fill='x', pady=2)
+        self.label_output = ttk.Label(parent, text=self.tr('output_is', path='-'),
+                                      wraplength=220, foreground='#555555')
         self.label_output.pack(anchor='w', pady=(0, 6))
 
-        ttk.Separator(panel).pack(fill='x', pady=4)
-        ttk.Label(panel, text='Imagem', font=('', 10, 'bold')).pack(anchor='w')
-        self.label_image = ttk.Label(panel, text='-', wraplength=230)
+        ttk.Separator(parent).pack(fill='x', pady=4)
+        self._reg(ttk.Label(parent, text=self.tr('image'), font=('', 10, 'bold')),
+                  'image').pack(anchor='w')
+        self.label_image = ttk.Label(parent, text='-', wraplength=220)
         self.label_image.pack(anchor='w')
-        nav = ttk.Frame(panel)
+        nav = ttk.Frame(parent)
         nav.pack(fill='x', pady=4)
-        ttk.Button(nav, text='<< Anterior',
-                   command=lambda: self.change_image(-1)).pack(side='left', expand=True, fill='x')
-        ttk.Button(nav, text='Proxima >>',
-                   command=lambda: self.change_image(1)).pack(side='left', expand=True, fill='x')
+        self._reg(ttk.Button(nav, text=self.tr('previous'),
+                             command=lambda: self.change_image(-1)),
+                  'previous').pack(side='left', expand=True, fill='x')
+        self._reg(ttk.Button(nav, text=self.tr('next'),
+                             command=lambda: self.change_image(1)),
+                  'next').pack(side='left', expand=True, fill='x')
 
-        zoom_frame = ttk.Frame(panel)
+        zoom_frame = ttk.Frame(parent)
         zoom_frame.pack(fill='x')
         ttk.Button(zoom_frame, text='-', width=3,
                    command=lambda: self.adjust_zoom(1 / 1.25)).pack(side='left')
         ttk.Button(zoom_frame, text='+', width=3,
                    command=lambda: self.adjust_zoom(1.25)).pack(side='left')
-        ttk.Button(zoom_frame, text='Ajustar a janela',
-                   command=self.zoom_fit).pack(side='left', expand=True, fill='x')
+        self._reg(ttk.Button(zoom_frame, text=self.tr('fit_window'),
+                             command=self.zoom_fit),
+                  'fit_window').pack(side='left', expand=True, fill='x')
 
-        ttk.Separator(panel).pack(fill='x', pady=4)
-        ttk.Label(panel, text='Modo de selecao', font=('', 10, 'bold')).pack(anchor='w')
-        ttk.Checkbutton(panel, text='Tamanho fixo (clique no centro)',
-                        variable=self.var_fixed).pack(anchor='w')
-        size_frame = ttk.Frame(panel)
+        ttk.Separator(parent).pack(fill='x', pady=4)
+        self._reg(ttk.Label(parent, text=self.tr('selection_mode'),
+                            font=('', 10, 'bold')),
+                  'selection_mode').pack(anchor='w')
+        self._reg(ttk.Checkbutton(parent, text=self.tr('fixed_size'),
+                                  variable=self.var_fixed),
+                  'fixed_size').pack(anchor='w')
+        size_frame = ttk.Frame(parent)
         size_frame.pack(fill='x', pady=2)
-        ttk.Label(size_frame, text='larg').pack(side='left')
+        self._reg(ttk.Label(size_frame, text=self.tr('width_short')),
+                  'width_short').pack(side='left')
         ttk.Entry(size_frame, textvariable=self.var_width, width=6).pack(side='left', padx=2)
-        ttk.Label(size_frame, text='x alt').pack(side='left')
+        self._reg(ttk.Label(size_frame, text=self.tr('height_short')),
+                  'height_short').pack(side='left')
         ttk.Entry(size_frame, textvariable=self.var_height, width=6).pack(side='left', padx=2)
-        ttk.Label(size_frame, text='px').pack(side='left')
-        ttk.Checkbutton(panel, text='Travar ROIs para as proximas imagens',
-                        variable=self.var_lock,
-                        command=self.update_lock).pack(anchor='w', pady=2)
+        self._reg(ttk.Label(size_frame, text=self.tr('pixels')),
+                  'pixels').pack(side='left')
+        self._reg(ttk.Checkbutton(parent, text=self.tr('lock_rois'),
+                                  variable=self.var_lock, command=self.update_lock),
+                  'lock_rois').pack(anchor='w', pady=2)
 
-        ttk.Separator(panel).pack(fill='x', pady=4)
-        ttk.Label(panel, text='Grade dentro de cada ROI',
-                  font=('', 10, 'bold')).pack(anchor='w')
-        grid_frame = ttk.Frame(panel)
+        ttk.Separator(parent).pack(fill='x', pady=4)
+        self._reg(ttk.Label(parent, text=self.tr('grid_title'), font=('', 10, 'bold')),
+                  'grid_title').pack(anchor='w')
+        grid_frame = ttk.Frame(parent)
         grid_frame.pack(fill='x', pady=2)
-        ttk.Label(grid_frame, text='linhas').pack(side='left')
+        self._reg(ttk.Label(grid_frame, text=self.tr('rows')),
+                  'rows').pack(side='left')
         ttk.Entry(grid_frame, textvariable=self.var_rows, width=4).pack(side='left', padx=2)
-        ttk.Label(grid_frame, text='colunas').pack(side='left')
+        self._reg(ttk.Label(grid_frame, text=self.tr('columns')),
+                  'columns').pack(side='left')
         ttk.Entry(grid_frame, textvariable=self.var_cols, width=4).pack(side='left', padx=2)
-        ttk.Button(grid_frame, text='Ver', width=5,
-                   command=self.redraw).pack(side='left', padx=2)
+        self._reg(ttk.Button(grid_frame, text=self.tr('show'), width=6,
+                             command=self.redraw),
+                  'show').pack(side='left', padx=2)
 
-        ttk.Separator(panel).pack(fill='x', pady=4)
-        ttk.Label(panel, text='ROIs da imagem atual',
-                  font=('', 10, 'bold')).pack(anchor='w')
-        self.listbox = tk.Listbox(panel, height=7, exportselection=False)
+        ttk.Separator(parent).pack(fill='x', pady=4)
+        self._reg(ttk.Label(parent, text=self.tr('rois_title'), font=('', 10, 'bold')),
+                  'rois_title').pack(anchor='w')
+        self.listbox = tk.Listbox(parent, height=6, exportselection=False)
         self.listbox.pack(fill='x', pady=2)
-        roi_buttons = ttk.Frame(panel)
+        roi_buttons = ttk.Frame(parent)
         roi_buttons.pack(fill='x')
-        ttk.Button(roi_buttons, text='Remover (Del)',
-                   command=self.remove_roi).pack(side='left', expand=True, fill='x')
-        ttk.Button(roi_buttons, text='Limpar (C)',
-                   command=self.clear_rois).pack(side='left', expand=True, fill='x')
+        self._reg(ttk.Button(roi_buttons, text=self.tr('remove'),
+                             command=self.remove_roi),
+                  'remove').pack(side='left', expand=True, fill='x')
+        self._reg(ttk.Button(roi_buttons, text=self.tr('clear'),
+                             command=self.clear_rois),
+                  'clear').pack(side='left', expand=True, fill='x')
 
-        ttk.Separator(panel).pack(fill='x', pady=4)
-        ttk.Label(panel, text='Saida', font=('', 10, 'bold')).pack(anchor='w')
-        format_frame = ttk.Frame(panel)
+        ttk.Separator(parent).pack(fill='x', pady=4)
+        self._reg(ttk.Label(parent, text=self.tr('output'), font=('', 10, 'bold')),
+                  'output').pack(anchor='w')
+        format_frame = ttk.Frame(parent)
         format_frame.pack(fill='x', pady=2)
-        ttk.Label(format_frame, text='formato').pack(side='left')
+        self._reg(ttk.Label(format_frame, text=self.tr('format')),
+                  'format').pack(side='left')
         ttk.Combobox(format_frame, textvariable=self.var_format, width=7,
                      values=('png', 'jpg', 'tif'),
                      state='readonly').pack(side='left', padx=4)
-        ttk.Checkbutton(panel, text='Subpasta por imagem',
-                        variable=self.var_subfolder).pack(anchor='w')
-        ttk.Button(panel, text='Salvar recortes e avancar (Enter)',
-                   command=self.save_and_next).pack(fill='x', pady=(6, 2))
-        ttk.Button(panel, text='Aplicar estas ROIs a TODAS as imagens',
-                   command=self.apply_to_all).pack(fill='x', pady=2)
-
-        ttk.Separator(panel).pack(fill='x', pady=4)
-        ttk.Label(panel, textvariable=self.var_cursor,
-                  foreground='#444444').pack(anchor='w')
-        ttk.Label(panel, textvariable=self.var_status, wraplength=230,
-                  foreground='#0a5a0a').pack(anchor='w', pady=4)
+        self._reg(ttk.Checkbutton(parent, text=self.tr('subfolder'),
+                                  variable=self.var_subfolder),
+                  'subfolder').pack(anchor='w', pady=(0, 4))
 
     def _bind_events(self):
         self.canvas.bind('<ButtonPress-1>', self.mouse_press)
@@ -580,7 +995,7 @@ class CropperApp:
                 ('<equal>', lambda e: self.adjust_zoom(1.25)),
                 ('<minus>', lambda e: self.adjust_zoom(1 / 1.25)),
                 ('<Key-0>', lambda e: self.zoom_fit()),
-                ('<F1>', lambda e: show_about(self.root)),
+                ('<F1>', lambda e: show_about(self.root, self.tr)),
         ):
             self.root.bind(sequence, self._only_outside_fields(function))
 
@@ -596,32 +1011,33 @@ class CropperApp:
     # ----------------------------------------------------------------- folders
     def choose_input(self):
         from tkinter import filedialog
-        folder = filedialog.askdirectory(title='Pasta com as imagens')
+        folder = filedialog.askdirectory(title=self.tr('dialog_images'))
         if folder:
             self.load_folder(Path(folder))
 
     def choose_output(self):
         from tkinter import filedialog
-        folder = filedialog.askdirectory(title='Pasta de saida dos recortes')
+        folder = filedialog.askdirectory(title=self.tr('dialog_output'))
         if folder:
             self.output_folder = Path(folder)
-            self.label_output.config(text=f'saida: {self.output_folder}')
+            self._update_output_label()
 
     def load_folder(self, folder):
         from tkinter import messagebox
         images = list_images(folder)
         if not images:
-            messagebox.showwarning('Sem imagens',
-                                   f'Nenhuma imagem ({", ".join(EXTENSIONS)}) em:\n{folder}')
+            messagebox.showwarning(
+                self.tr('no_images_title'),
+                self.tr('no_images', extensions=', '.join(EXTENSIONS), folder=folder))
             return
         self.input_folder = Path(folder)
         self.images = images
         self.index = 0
         self.saved.clear()
         if self.output_folder is None:
-            self.output_folder = self.input_folder / 'recortes'
-        self.label_output.config(text=f'saida: {self.output_folder}')
-        self.var_status.set(f'{len(images)} imagens carregadas.')
+            self.output_folder = self.input_folder / 'crops'
+        self._update_output_label()
+        self.set_status('status_loaded', n=len(images))
         self.load_current_image()
 
     # ------------------------------------------------------------------ images
@@ -630,10 +1046,7 @@ class CropperApp:
         self.img = open_image(path)
         self.manual_zoom = None
         self.rois = [tuple(r) for r in self.locked_rois] if self.var_lock.get() else []
-        mark = ' [salva]' if path.name in self.saved else ''
-        self.label_image.config(
-            text=f'{self.index + 1}/{len(self.images)}  {path.name}\n'
-                 f'{self.img.size[0]} x {self.img.size[1]} px{mark}')
+        self._update_image_label()
         self.redraw()
 
     def change_image(self, step):
@@ -641,7 +1054,7 @@ class CropperApp:
             return
         new_index = self.index + step
         if not 0 <= new_index < len(self.images):
-            self.var_status.set('Fim da lista de imagens.')
+            self.set_status('status_end_of_list')
             return
         if self.var_lock.get():
             self.locked_rois = [tuple(r) for r in self.rois]
@@ -776,18 +1189,15 @@ class CropperApp:
             self.rois.append(roi)
             if self.var_lock.get():
                 self.locked_rois = [tuple(r) for r in self.rois]
-            self.var_status.set(f'ROI {len(self.rois)}: {roi[2]}x{roi[3]} px '
-                                f'em ({roi[0]}, {roi[1]})')
+            self.set_status('status_roi_added', n=len(self.rois),
+                            w=roi[2], h=roi[3], x=roi[0], y=roi[1])
         self.redraw()
 
     def mouse_move(self, event):
         if self.img is None:
             return
-        cx, cy = self._to_original(event)
-        text = f'cursor: ({int(cx)}, {int(cy)}) px   zoom: {self.scale * 100:.0f}%'
-        if self._temp_roi:
-            text += f'   selecao: {self._temp_roi[2]}x{self._temp_roi[3]}'
-        self.var_cursor.set(text)
+        self._cursor = self._to_original(event)
+        self._update_cursor_label()
 
     # ---------------------------------------------------------------- actions
     def remove_roi(self):
@@ -813,17 +1223,17 @@ class CropperApp:
     def update_lock(self):
         if self.var_lock.get():
             self.locked_rois = [tuple(r) for r in self.rois]
-            self.var_status.set('ROIs travadas: serao reaproveitadas nas proximas imagens.')
+            self.set_status('status_locked')
         else:
             self.locked_rois = []
-            self.var_status.set('ROIs destravadas.')
+            self.set_status('status_unlocked')
 
     def save_and_next(self):
         from tkinter import messagebox
         if self.img is None or not self.images:
             return
         if not self.rois:
-            messagebox.showinfo('Sem ROI', 'Selecione ao menos uma regiao antes de salvar.')
+            messagebox.showinfo(self.tr('no_roi_title'), self.tr('no_roi_save'))
             return
 
         path = self.images[self.index]
@@ -836,34 +1246,35 @@ class CropperApp:
             img=self.img)
         log_to_csv(self.output_folder, records)
         self.saved.add(path.name)
-        self.var_status.set(f'{len(records)} recorte(s) salvos de {path.name}.')
+        self.set_status('status_saved', n=len(records), name=path.name)
 
         if self.index < len(self.images) - 1:
             self.change_image(1)
         else:
             self.load_current_image()
-            messagebox.showinfo('Fim', 'Ultima imagem da pasta processada.')
+            messagebox.showinfo(self.tr('end_title'), self.tr('end_message'))
 
     def apply_to_all(self):
         from tkinter import messagebox
         if not self.rois or not self.images:
-            messagebox.showinfo('Sem ROI', 'Selecione a regiao antes de aplicar em lote.')
+            messagebox.showinfo(self.tr('no_roi_title'), self.tr('no_roi_batch'))
             return
         n_rows = self._as_int(self.var_rows, 1)
         n_cols = self._as_int(self.var_cols, 1)
-        per_image = len(self.rois) * n_rows * n_cols
-        question = (f'Aplicar {len(self.rois)} ROI(s) x grade {n_rows}x{n_cols} '
-                    f'({per_image} recortes por imagem) as {len(self.images)} '
-                    f'imagens da pasta?\n\nSaida: {self.output_folder}')
-        if not messagebox.askokcancel('Aplicar a todas', question):
+        question = self.tr('apply_all_question',
+                           rois=len(self.rois), rows=n_rows, cols=n_cols,
+                           per_image=len(self.rois) * n_rows * n_cols,
+                           n=len(self.images), path=self.output_folder)
+        if not messagebox.askokcancel(self.tr('apply_all_title'), question):
             return
 
         total = apply_in_batch(self.input_folder, self.output_folder, self.rois,
                                n_rows, n_cols, self.var_format.get(),
                                self.var_subfolder.get(), log=lambda m: None)
         self.saved.update(p.name for p in self.images)
-        self.var_status.set(f'{total} recortes gravados em {self.output_folder}.')
-        messagebox.showinfo('Concluido', f'{total} recortes gravados em:\n{self.output_folder}')
+        self.set_status('status_batch_done', n=total, path=self.output_folder)
+        messagebox.showinfo(self.tr('done_title'),
+                            self.tr('done_message', n=total, path=self.output_folder))
 
     @staticmethod
     def _as_int(variable, default):
@@ -873,11 +1284,11 @@ class CropperApp:
             return default
 
 
-def open_window(input_folder=None, output_folder=None, fmt='png'):
+def open_window(input_folder=None, output_folder=None, fmt='png', language=None):
     """Open the cropping interface (callable from a notebook or the terminal)."""
     import tkinter as tk
     root = tk.Tk()
-    CropperApp(root, input_folder, output_folder, fmt)
+    CropperApp(root, input_folder, output_folder, fmt, language)
     root.mainloop()
 
 
@@ -899,6 +1310,8 @@ def _parse_arguments(argv=None):
     p.add_argument('--batch', action='store_true',
                    help='apply the --roi to the whole folder without opening the window')
     p.add_argument('--csv', help='redo the crops described in a CSV')
+    p.add_argument('--lang', choices=sorted(TEXTS), default=None,
+                   help='interface language: pt or en (default: remembered/system)')
     p.add_argument('--about', action='store_true',
                    help='open only the "About" window (program credits)')
     return p.parse_args(argv)
@@ -908,7 +1321,7 @@ def main(argv=None):
     args = _parse_arguments(argv)
 
     if args.about:
-        window = show_about()
+        window = show_about(tr=Translator(args.lang))
         window.mainloop()
         return 0
 
@@ -942,7 +1355,7 @@ def main(argv=None):
                        args.format, args.subfolder)
         return 0
 
-    open_window(args.input, args.output, args.format)
+    open_window(args.input, args.output, args.format, args.lang)
     return 0
 
 

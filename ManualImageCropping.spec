@@ -14,7 +14,7 @@ a = Analysis(
     binaries=[],
     datas=[
         ('assets/gaaa_logo.jpg', 'assets'),
-        ('assets/gaaa.ico', 'assets'),
+        ('assets/app_icon.ico', 'assets'),
     ],
     hiddenimports=[],
     hookspath=[],
@@ -49,6 +49,6 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon='assets/gaaa.ico',
+    icon='assets/app_icon.ico',
     version='exe_version.txt',
 )

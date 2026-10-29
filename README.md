@@ -23,7 +23,7 @@ Developed by the **GAAA** research group · Software created by **Dennis da Silv
 When working with digital images in analytical chemistry, each photograph of a sample has to
 become several sub-images cropped from the same region, at the same size, so that colour
 histograms are comparable across samples. Doing this by hand in an image editor is slow,
-inconsistent and — worst of all for a paper — **not reproducible**: nobody can repeat
+inconsistent and, worst of all for a paper, **not reproducible**: nobody can repeat
 exactly the same crops afterwards.
 
 This program solves the three points: selection is visual, the size can be locked, and
@@ -41,7 +41,7 @@ original resolution and with their coordinates logged to CSV.</sub>
 | Feature | What it does |
 |---|---|
 | **Free selection** | drag a rectangle over the region of interest in each image |
-| **Fixed size** | set `width × height` in pixels and just click the centre — every crop comes out identical, essential for comparing histograms |
+| **Fixed size** | set `width × height` in pixels and just click the centre; every crop comes out identical, which is essential for comparing histograms |
 | **Locked ROIs** | mark the region once and reuse it on the following images (tripod/scanner shots) |
 | **Grid inside the ROI** | split each region into `rows × columns`, multiplying the sub-samples per photo |
 | **Apply to all** | process the whole folder with the current ROIs, in one click |
@@ -49,6 +49,8 @@ original resolution and with their coordinates logged to CSV.</sub>
 | **Coordinate CSV** | `crop_coords.csv` records every crop and lets you redo them later |
 | **EXIF correction** | the orientation recorded by the camera is applied before cropping |
 | **Batch / CLI mode** | the same code runs without a window, for pipelines and notebooks |
+| **Bilingual interface** | English and Portuguese, switched from the panel without restarting; the choice is remembered |
+| **Fits any screen** | the action buttons are pinned to the bottom and the controls scroll, so nothing is ever cut off |
 
 ### Keyboard shortcuts
 
@@ -64,10 +66,14 @@ original resolution and with their coordinates logged to CSV.</sub>
 1. Download **[ManualImageCropping.exe](../../releases/latest)** (or take it from
    [`executable/ManualImageCropping.exe`](executable/ManualImageCropping.exe) in this
    repository).
-2. Double-click it. **No need to install Python or anything else** — the logo, the icon and
+2. Double-click it. **No need to install Python or anything else.** The logo, the icon and
    every library travel inside the executable (~19 MB).
-3. `Abrir pasta de imagens...` (open image folder) → `Pasta de saída...` (output folder) →
-   draw the ROIs → `Enter`.
+3. `Open image folder...` → `Output folder...` → draw the ROIs → `Enter`.
+
+> **Language:** the interface is available in **English** and **Portuguese**. Use the
+> selector at the bottom of the control panel to switch at any moment. The window changes
+> immediately, without losing the ROIs you have already drawn, and the choice is remembered
+> for the next run. The first run follows the language of the operating system.
 
 > **SmartScreen:** the executable is not digitally signed (a code-signing certificate is
 > paid), so on first run Windows may warn that *"Windows protected your PC"*. Click
@@ -78,13 +84,9 @@ Want to try it without images at hand? The folder
 [`examples/sample_image/`](examples/sample_image) ships one sample photograph (the same one
 in the screenshot above), ready to crop.
 
-> **Interface language:** the code, the file names and the command-line arguments are in
-> English, but the window labels are still in Portuguese, the language of the research group
-> that uses the tool. Translating the interface is planned for a future version.
-
 ## Use as a Python library
 
-The same file is importable — this is how it goes into analysis notebooks:
+The same file is importable, which is how it goes into analysis notebooks:
 
 ```python
 from pathlib import Path
@@ -108,6 +110,7 @@ Or from the command line:
 ```powershell
 python manual_cropping.py --input images --output crops --roi 300,200,600,400 --grid 2x3 --batch
 python manual_cropping.py --input images --output crops2 --csv crops/crop_coords.csv
+python manual_cropping.py --lang pt          # open the window in Portuguese
 ```
 
 The notebook
@@ -127,7 +130,18 @@ redo everything from the CSV.
 | `log_to_csv(output_folder, records)` | append the records to `crop_coords.csv` |
 | `apply_in_batch(input_folder, output_folder, rois, ...)` | apply the ROIs to a whole folder |
 | `redo_from_csv(csv_path, input_folder, output_folder, ...)` | reproduce the crops of an earlier session |
-| `open_window(input_folder, output_folder, fmt)` | open the graphical interface |
+| `open_window(input_folder, output_folder, fmt, language)` | open the graphical interface |
+
+## Tests
+
+```powershell
+python tests/test_manual_cropping.py
+```
+
+No test runner is required. The suite covers the cropping core, the coordinate CSV (including
+files written by version 1.0), the two language tables, the command line, and the panel
+layout at six window sizes, checking that the action buttons stay on screen and that the
+panel scrollbar appears exactly when the controls do not fit.
 
 ## Building the executable
 
@@ -147,10 +161,11 @@ ManualImageCropping.spec    PyInstaller recipe (what goes into the executable)
 exe_version.txt             authorship/version shown in Properties > Details
 build_exe.bat               builds everything in one step
 requirements.txt            Pillow (program) + PyInstaller (build)
-assets/                     GAAA logo, icon and the .ico generator
+assets/                     program icon and the GAAA logo shown in "About"
 docs/                       screenshots used in this README
 examples/                   usage notebook and one sample image for testing
 executable/                 ManualImageCropping.exe, ready to download
+tests/                      test suite, runnable with plain Python
 ```
 
 The file `manual_cropping.py` is split into three independent blocks: the **interface-free
@@ -162,7 +177,7 @@ window.
 
 | Version | Changes |
 |---|---|
-| **1.1** | Code, file names, command-line arguments and CSV columns translated to English. CSV files written by 1.0, with Portuguese column names, are still accepted by `redo_from_csv`. |
+| **1.1** | Bilingual interface (English/Portuguese) with live switching and a remembered choice, plus `--lang`. Code, file names, command-line arguments and CSV columns translated to English; CSV files written by 1.0, with Portuguese column names, are still accepted by `redo_from_csv`. New program icon. Added a test suite. **Fixed:** the control panel needed 818 px of height while the window never exceeded 780 px, so the *save and move on* and *apply to all* buttons were cut off, and on smaller screens the program became unusable. The actions are now pinned to the bottom, the controls above them scroll, and the window is placed inside the usable area of the screen. |
 | **1.0** | First public release. |
 
 ## About
@@ -181,7 +196,7 @@ can use it and so that the crops of any work done with it are reproducible by th
 
 ## License
 
-[MIT](LICENSE) — free to use, including commercially, as long as the authorship notice is
+[MIT](LICENSE). Free to use, including commercially, as long as the authorship notice is
 kept. If this program helps in academic work, a citation to GAAA is welcome.
 
 ---
@@ -189,21 +204,23 @@ kept. If this program helps in academic work, a citation to GAAA is welcome.
 <details>
 <summary><b>Resumo em português</b></summary>
 
-**Manual Image Cropping** — ferramenta de janela (Tkinter + Pillow) para recortar regiões de
-interesse (ROIs) de lotes de imagens, feita para análise de histogramas de cor em química
+**Manual Image Cropping** é uma ferramenta de janela (Tkinter + Pillow) para recortar regiões
+de interesse (ROIs) de lotes de imagens, feita para análise de histogramas de cor em química
 analítica.
 
 Os recortes saem sempre na resolução original, toda ROI é registrada em `crop_coords.csv`, e
-esse CSV refaz os recortes idênticos depois — o que torna a etapa de pré-processamento de
+esse CSV refaz os recortes idênticos depois, o que torna a etapa de pré-processamento de
 imagens de um artigo reprodutível por terceiros. Tem seleção livre, seleção de tamanho fixo,
 ROIs travadas entre imagens e uma grade `n × m` dentro de cada ROI que multiplica as
 sub-amostras por fotografia. É distribuída como executável único para Windows (sem precisar
 de Python) e também funciona como módulo Python importável, para notebooks e processamento
 em lote.
 
-A partir da versão 1.1 o código, os nomes de arquivos e os argumentos da linha de comando
-estão em inglês; os rótulos da janela continuam em português. CSVs gerados pela versão 1.0,
-com as colunas em português, continuam sendo aceitos por `redo_from_csv`.
+A interface está em **português e inglês**, com troca pelo seletor no rodapé do painel, sem
+reiniciar e sem perder as ROIs já marcadas; a escolha fica gravada para a próxima vez. O
+código, os nomes de arquivos e os argumentos da linha de comando estão em inglês desde a
+versão 1.1, e CSVs gerados pela versão 1.0, com as colunas em português, continuam sendo
+aceitos por `redo_from_csv`.
 
 Desenvolvido pelo grupo de pesquisa GAAA (Grupo de Abordagens Analíticas Alternativas).
 Software criado por Dennis da Silva Ferreira. Licença MIT.
