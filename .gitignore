@@ -1,10 +1,10 @@
-# artefatos de compilacao do PyInstaller
+# PyInstaller build artefacts
 build/
 dist/
 *.manifest
 
-# o executavel publicado fica versionado em executavel/ (excecao proposital)
-!executavel/RecorteManual.exe
+# the published executable is versioned under executable/ (deliberate exception)
+!executable/ManualImageCropping.exe
 
 # Python
 __pycache__/
@@ -14,13 +14,14 @@ venv/
 env/
 .ipynb_checkpoints/
 
-# saidas de teste do proprio programa
+# output of the program itself when testing
+crops/
 recortes/
-recortes_demo/
-recortes_refeitos/
-recortes_coords.csv
+crops_demo/
+redo/
+crop_coords.csv
 
-# sistema / editores
+# system / editors
 Thumbs.db
 desktop.ini
 .DS_Store

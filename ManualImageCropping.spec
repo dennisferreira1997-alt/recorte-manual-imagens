@@ -1,15 +1,15 @@
 # -*- mode: python ; coding: utf-8 -*-
 """
-Receita do PyInstaller para gerar o RecorteManual.exe (arquivo unico, sem
-console). A logomarca do GAAA e o icone viajam dentro do executavel e sao
-localizados em tempo de execucao por `recorte_manual.caminho_recurso`.
+PyInstaller recipe for ManualImageCropping.exe (single file, no console).
+The GAAA logo and the icon travel inside the executable and are located at
+runtime by `manual_cropping.resource_path`.
 
-Para gerar:
-    .venv\\Scripts\\pyinstaller.exe RecorteManual.spec --noconfirm
+To build:
+    .venv\Scripts\pyinstaller.exe ManualImageCropping.spec --noconfirm
 """
 
 a = Analysis(
-    ['recorte_manual.py'],
+    ['manual_cropping.py'],
     pathex=[],
     binaries=[],
     datas=[
@@ -20,7 +20,7 @@ a = Analysis(
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    # o programa so precisa de Tkinter + Pillow; cortar o resto reduz o .exe
+    # the program only needs Tkinter + Pillow; dropping the rest shrinks the exe
     excludes=[
         'matplotlib', 'pandas', 'numpy', 'scipy', 'sklearn', 'seaborn',
         'IPython', 'jupyter', 'notebook', 'pytest', 'setuptools', 'pip',
@@ -36,19 +36,19 @@ exe = EXE(
     a.binaries,
     a.datas,
     [],
-    name='RecorteManual',
+    name='ManualImageCropping',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
     upx=True,
     upx_exclude=[],
     runtime_tmpdir=None,
-    console=False,          # aplicativo de janela: nao abre o prompt preto
+    console=False,          # windowed application: no black prompt
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
     icon='assets/gaaa.ico',
-    version='versao_exe.txt',
+    version='exe_version.txt',
 )

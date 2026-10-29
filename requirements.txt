@@ -1,5 +1,5 @@
-# Para rodar o programa (o Tkinter ja vem com o Python no Windows)
+# To run the program (Tkinter already ships with Python on Windows)
 pillow>=10.0
 
-# Para gerar o RecorteManual.exe
+# To build ManualImageCropping.exe
 pyinstaller>=6.0

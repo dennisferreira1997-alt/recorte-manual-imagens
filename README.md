@@ -2,177 +2,210 @@
 
 <img src="assets/gaaa_logo.jpg" alt="Grupo de Abordagens Analíticas Alternativas (GAAA)" width="200">
 
-# Recorte Manual de Imagens
+# Manual Image Cropping
 
-**Ferramenta de janela para recortar regiões de interesse (ROIs) de lotes de imagens,
-com coordenadas registradas em CSV para que o recorte seja reprodutível.**
+**A desktop tool for cropping regions of interest (ROIs) from batches of images,
+with every ROI logged to CSV so that the cropping step is reproducible.**
 
 ![Python](https://img.shields.io/badge/Python-3.9%2B-3776AB?logo=python&logoColor=white)
 ![Tkinter](https://img.shields.io/badge/GUI-Tkinter%20%2B%20Pillow-0a7e8c)
-![Windows](https://img.shields.io/badge/Windows-executável%20único-0078D6?logo=windows&logoColor=white)
-![License](https://img.shields.io/badge/licença-MIT-green)
+![Windows](https://img.shields.io/badge/Windows-single--file%20executable-0078D6?logo=windows&logoColor=white)
+![License](https://img.shields.io/badge/license-MIT-green)
 
-Desenvolvido pelo grupo de pesquisa **GAAA** · Software criado por **Dennis da Silva Ferreira**
+Developed by the **GAAA** research group · Software created by **Dennis da Silva Ferreira**
 
 </div>
 
 ---
 
-## O problema
+## The problem
 
-Quando trabalhamos com imagens digitais em química analítica, cada fotografia de uma amostra precisa virar várias
-sub-imagens recortadas na mesma região, com o mesmo tamanho, para que os histogramas de
-cor sejam comparáveis entre amostras. Fazer isso à mão em um editor de imagens é lento,
-inconsistente e o pior para um artigo **não é reprodutível**: ninguém consegue repetir
-exatamente os mesmos recortes depois.
+When working with digital images in analytical chemistry, each photograph of a sample has to
+become several sub-images cropped from the same region, at the same size, so that colour
+histograms are comparable across samples. Doing this by hand in an image editor is slow,
+inconsistent and — worst of all for a paper — **not reproducible**: nobody can repeat
+exactly the same crops afterwards.
 
-Este programa resolve os três pontos: a seleção é visual, o tamanho pode ser travado, e
-**toda ROI aplicada é gravada em um CSV** que refaz os recortes idênticos a qualquer
-momento, em qualquer computador.
+This program solves the three points: selection is visual, the size can be locked, and
+**every ROI applied is written to a CSV** that reproduces identical crops at any time,
+on any computer.
 
-![Tela principal do programa](docs/tela-principal.png)
+![Main window of the program](docs/main-window.png)
 
-<sub>Fotografia de uma amostra de lixiviado de e-waste. A ROI marcada sobre o disco da amostra está
-dividida em uma grade 2 × 3, ou seja, seis sub-imagens extraídas desta única foto, todas na
-resolução original e com as coordenadas registradas em CSV.</sub>
+<sub>Photograph of an e-waste leachate sample. The ROI drawn over the sample disc is divided
+into a 2 × 3 grid, that is, six sub-images extracted from this single photo, all at the
+original resolution and with their coordinates logged to CSV.</sub>
 
-## Recursos
+## Features
 
-| Recurso | Para que serve |
+| Feature | What it does |
 |---|---|
-| **Seleção livre** | arrasta o retângulo sobre a região desejada em cada imagem |
-| **Tamanho fixo** | define `largura × altura` em pixels e basta clicar no centro — todos os recortes saem idênticos, essencial para comparar histogramas |
-| **ROIs travadas** | marca a região uma vez e reaproveita nas imagens seguintes (fotos de tripé/scanner) |
-| **Grade dentro da ROI** | divide cada região em `linhas × colunas`, multiplicando as sub-amostras por foto |
-| **Aplicar a todas** | processa a pasta inteira com as ROIs atuais, em um clique |
-| **Resolução original** | o zoom é apenas visual; o recorte sai sempre na resolução da foto |
-| **CSV de coordenadas** | `recortes_coords.csv` registra cada recorte e permite refazer tudo depois |
-| **Correção de EXIF** | a orientação gravada pela câmera é aplicada antes do recorte |
-| **Modo em lote / CLI** | o mesmo código roda sem janela, para pipelines e notebooks |
+| **Free selection** | drag a rectangle over the region of interest in each image |
+| **Fixed size** | set `width × height` in pixels and just click the centre — every crop comes out identical, essential for comparing histograms |
+| **Locked ROIs** | mark the region once and reuse it on the following images (tripod/scanner shots) |
+| **Grid inside the ROI** | split each region into `rows × columns`, multiplying the sub-samples per photo |
+| **Apply to all** | process the whole folder with the current ROIs, in one click |
+| **Original resolution** | zoom is visual only; the crop always comes out at the photograph's resolution |
+| **Coordinate CSV** | `crop_coords.csv` records every crop and lets you redo them later |
+| **EXIF correction** | the orientation recorded by the camera is applied before cropping |
+| **Batch / CLI mode** | the same code runs without a window, for pipelines and notebooks |
 
-### Atalhos de teclado
+### Keyboard shortcuts
 
-| Tecla | Ação | Tecla | Ação |
+| Key | Action | Key | Action |
 |---|---|---|---|
-| `Enter` | salva os recortes e avança | `Del` | remove a última ROI |
-| `←` `→` | troca de imagem | `C` | limpa as ROIs |
-| `+` `-` `0` | zoom (ou `Ctrl`+roda do mouse) | `T` | trava/destrava as ROIs |
-| `F1` | janela "Sobre" | | |
+| `Enter` | save the crops and move on | `Del` | remove the last ROI |
+| `←` `→` | change image | `C` | clear the ROIs |
+| `+` `-` `0` | zoom (or `Ctrl`+mouse wheel) | `T` | lock/unlock the ROIs |
+| `F1` | "About" window | | |
 
-## Baixar e usar (Windows)
+## Download and use (Windows)
 
-1. Baixe o **[RecorteManual.exe](../../releases/latest)** (ou pegue em
-   [`executavel/RecorteManual.exe`](executavel/RecorteManual.exe) neste repositório).
-2. Duplo clique. **Não precisa instalar Python nem nada mais** — a logomarca, o ícone e
-   todas as bibliotecas viajam dentro do executável (~18 MB).
-3. `Abrir pasta de imagens...` → `Pasta de saída...` → desenhe as ROIs → `Enter`.
+1. Download **[ManualImageCropping.exe](../../releases/latest)** (or take it from
+   [`executable/ManualImageCropping.exe`](executable/ManualImageCropping.exe) in this
+   repository).
+2. Double-click it. **No need to install Python or anything else** — the logo, the icon and
+   every library travel inside the executable (~19 MB).
+3. `Abrir pasta de imagens...` (open image folder) → `Pasta de saída...` (output folder) →
+   draw the ROIs → `Enter`.
 
-> **SmartScreen:** o executável não é assinado digitalmente (certificado de código é pago),
-> então na primeira execução o Windows pode avisar *"O Windows protegeu o computador"*.
-> Clique em **Mais informações → Executar assim mesmo**. O código-fonte completo está
-> aqui no repositório para auditoria, e o `.exe` pode ser recompilado por qualquer pessoa
-> com o comando da seção seguinte.
+> **SmartScreen:** the executable is not digitally signed (a code-signing certificate is
+> paid), so on first run Windows may warn that *"Windows protected your PC"*. Click
+> **More info → Run anyway**. The full source code is here in the repository for auditing,
+> and the `.exe` can be rebuilt by anyone with the command in the section below.
 
-Quer testar sem ter imagens à mão? A pasta [`exemplos/imagem_exemplo/`](exemplos/imagem_exemplo)
-traz uma fotografia de uma amostra (a mesma da captura de tela acima) pronta para recortar.
+Want to try it without images at hand? The folder
+[`examples/sample_image/`](examples/sample_image) ships one sample photograph (the same one
+in the screenshot above), ready to crop.
 
-## Usar como biblioteca Python
+> **Interface language:** the code, the file names and the command-line arguments are in
+> English, but the window labels are still in Portuguese, the language of the research group
+> that uses the tool. Translating the interface is planned for a future version.
 
-O mesmo arquivo é importável — é assim que ele entra em notebooks de análise:
+## Use as a Python library
+
+The same file is importable — this is how it goes into analysis notebooks:
 
 ```python
 from pathlib import Path
-import recorte_manual as rec
+import manual_cropping as mc
 
-# 1) janela de seleção
-rec.abrir_janela(Path('imagens/original'), Path('imagens/recorte'), 'jpg')
+# 1) selection window
+mc.open_window(Path('images/original'), Path('images/crops'), 'jpg')
 
-# 2) mesma ROI em toda a pasta, cada uma dividida em 2x3 sub-recortes
-rec.aplicar_em_lote('imagens/original', 'imagens/recorte',
-                    rois=[(300, 200, 600, 400)],
-                    n_linhas=2, n_colunas=3, formato='png')
+# 2) the same ROI over the whole folder, each one split into 2x3 sub-crops
+mc.apply_in_batch('images/original', 'images/crops',
+                  rois=[(300, 200, 600, 400)],
+                  n_rows=2, n_cols=3, fmt='png')
 
-# 3) refazer exatamente os recortes de uma sessão anterior
-rec.refazer_do_csv('imagens/recorte/recortes_coords.csv',
-                   'imagens/original', 'recortes_refeitos', formato='png')
+# 3) redo exactly the crops of an earlier session
+mc.redo_from_csv('images/crops/crop_coords.csv',
+                 'images/original', 'crops_redone', fmt='png')
 ```
 
-Ou pela linha de comando:
+Or from the command line:
 
 ```powershell
-python recorte_manual.py --entrada imagens --saida recortes --roi 300,200,600,400 --grade 2x3 --lote
-python recorte_manual.py --entrada imagens --saida recortes2 --csv recortes/recortes_coords.csv
+python manual_cropping.py --input images --output crops --roi 300,200,600,400 --grid 2x3 --batch
+python manual_cropping.py --input images --output crops2 --csv crops/crop_coords.csv
 ```
 
-O notebook [`exemplos/Recorte_Manual_Imagens.ipynb`](exemplos/Recorte_Manual_Imagens.ipynb)
-mostra o fluxo completo: abrir a janela, aplicar em lote, conferir os recortes em mosaico e
-refazer tudo a partir do CSV.
+The notebook
+[`examples/manual_cropping_example.ipynb`](examples/manual_cropping_example.ipynb)
+shows the full workflow: open the window, apply in batch, check the crops as a mosaic and
+redo everything from the CSV.
 
-## Compilar o executável
+### Public API
+
+| Function | Purpose |
+|---|---|
+| `list_images(folder)` | sorted list of the images in a folder |
+| `open_image(path)` | open as RGB, applying the EXIF orientation |
+| `clamp_roi(x, y, width, height, bounds)` | fit an ROI inside the image |
+| `split_into_grid(roi, n_rows, n_cols)` | split one ROI into a grid of blocks |
+| `save_crops(image_path, rois, output_folder, ...)` | crop one image and return the CSV records |
+| `log_to_csv(output_folder, records)` | append the records to `crop_coords.csv` |
+| `apply_in_batch(input_folder, output_folder, rois, ...)` | apply the ROIs to a whole folder |
+| `redo_from_csv(csv_path, input_folder, output_folder, ...)` | reproduce the crops of an earlier session |
+| `open_window(input_folder, output_folder, fmt)` | open the graphical interface |
+
+## Building the executable
 
 ```powershell
 pip install -r requirements.txt
-pyinstaller RecorteManual.spec --noconfirm --clean
+pyinstaller ManualImageCropping.spec --noconfirm --clean
 ```
 
-O resultado sai em `dist\RecorteManual.exe`. No Windows, `construir_exe.bat` faz os três
-passos (dependências → ícone → compilação) com um duplo clique.
+The result lands in `dist\ManualImageCropping.exe`. On Windows, `build_exe.bat` runs the
+three steps (dependencies → icon → build) with a double-click.
 
-## Estrutura do repositório
+## Repository layout
 
 ```
-recorte_manual.py        código do programa: núcleo, interface Tkinter e CLI
-RecorteManual.spec       receita do PyInstaller (o que entra no executável)
-versao_exe.txt           autoria/versão exibidas em Propriedades > Detalhes
-construir_exe.bat        compila tudo em um passo
-requirements.txt         Pillow (programa) + PyInstaller (compilação)
-assets/                  logomarca do GAAA, ícone e o gerador do .ico
-docs/                    capturas de tela usadas neste README
-exemplos/                notebook de uso e uma imagem de amostra para teste
-executavel/              RecorteManual.exe pronto para baixar
+manual_cropping.py          program code: core, Tkinter interface and CLI
+ManualImageCropping.spec    PyInstaller recipe (what goes into the executable)
+exe_version.txt             authorship/version shown in Properties > Details
+build_exe.bat               builds everything in one step
+requirements.txt            Pillow (program) + PyInstaller (build)
+assets/                     GAAA logo, icon and the .ico generator
+docs/                       screenshots used in this README
+examples/                   usage notebook and one sample image for testing
+executable/                 ManualImageCropping.exe, ready to download
 ```
 
-O arquivo `recorte_manual.py` é dividido em três blocos independentes: o **núcleo sem
-interface** (recorte, grade, CSV), a **interface gráfica** e a **linha de comando**. O núcleo
-não importa Tkinter, então roda igual em servidor, notebook ou dentro da janela.
+The file `manual_cropping.py` is split into three independent blocks: the **interface-free
+core** (cropping, grid, CSV), the **graphical interface** and the **command line**. The core
+does not import Tkinter, so it runs the same way on a server, in a notebook or inside the
+window.
 
-## Sobre
+## Version history
 
-<img src="docs/sobre.png" alt="Janela Sobre do programa" width="330" align="right">
+| Version | Changes |
+|---|---|
+| **1.1** | Code, file names, command-line arguments and CSV columns translated to English. CSV files written by 1.0, with Portuguese column names, are still accepted by `redo_from_csv`. |
+| **1.0** | First public release. |
 
-**Desenvolvido pelo grupo de pesquisa GAAA**
-Grupo de Abordagens Analíticas Alternativas
+## About
 
-**Software criado por Dennis da Silva Ferreira**
+<img src="docs/about-window.png" alt="About window of the program" width="330" align="right">
 
-Escrito para o tratamento de imagens em química analítica, e publicado aqui
-para que outros grupos possam usar e para que os recortes de qualquer trabalho feito com
-ele sejam reprodutíveis por terceiros.
+**Developed by the GAAA research group**
+Grupo de Abordagens Analíticas Alternativas (Alternative Analytical Approaches Group)
+
+**Software created by Dennis da Silva Ferreira**
+
+Written for image processing in analytical chemistry, and published here so that other groups
+can use it and so that the crops of any work done with it are reproducible by third parties.
 
 <br clear="right">
 
-## Licença
+## License
 
-[MIT](LICENSE) — uso livre, inclusive comercial, mantendo o aviso de autoria.
-Se este programa ajudar em um trabalho acadêmico, uma citação ao GAAA é bem-vinda.
+[MIT](LICENSE) — free to use, including commercially, as long as the authorship notice is
+kept. If this program helps in academic work, a citation to GAAA is welcome.
 
 ---
 
 <details>
-<summary><b>English summary</b></summary>
+<summary><b>Resumo em português</b></summary>
 
-**Manual Image Cropping** — a Tkinter + Pillow desktop tool for cropping regions of
-interest (ROIs) from batches of images, built for colour-histogram analysis in analytical
-chemistry.
+**Manual Image Cropping** — ferramenta de janela (Tkinter + Pillow) para recortar regiões de
+interesse (ROIs) de lotes de imagens, feita para análise de histogramas de cor em química
+analítica.
 
-Crops always come out at the original resolution, every ROI is logged to
-`recortes_coords.csv`, and that CSV regenerates byte-identical crops later — which makes the
-image preprocessing step of a paper reproducible by third parties. Supports free selection,
-fixed-size selection, ROIs locked across images, and an `n × m` grid inside each ROI that
-multiplies sub-samples per photograph. Ships as a single-file Windows executable (no Python
-required) and doubles as an importable Python module for notebooks and batch pipelines.
+Os recortes saem sempre na resolução original, toda ROI é registrada em `crop_coords.csv`, e
+esse CSV refaz os recortes idênticos depois — o que torna a etapa de pré-processamento de
+imagens de um artigo reprodutível por terceiros. Tem seleção livre, seleção de tamanho fixo,
+ROIs travadas entre imagens e uma grade `n × m` dentro de cada ROI que multiplica as
+sub-amostras por fotografia. É distribuída como executável único para Windows (sem precisar
+de Python) e também funciona como módulo Python importável, para notebooks e processamento
+em lote.
 
-Developed by the GAAA research group (Grupo de Abordagens Analíticas Alternativas).
-Software created by Dennis da Silva Ferreira. MIT licensed.
+A partir da versão 1.1 o código, os nomes de arquivos e os argumentos da linha de comando
+estão em inglês; os rótulos da janela continuam em português. CSVs gerados pela versão 1.0,
+com as colunas em português, continuam sendo aceitos por `redo_from_csv`.
+
+Desenvolvido pelo grupo de pesquisa GAAA (Grupo de Abordagens Analíticas Alternativas).
+Software criado por Dennis da Silva Ferreira. Licença MIT.
 
 </details>
